@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import NumerologyBackground from '@/components/NumerologyBackground';
+
 type Message = {
   role: 'user' | 'assistant';
   content: string;
@@ -52,7 +54,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white font-sans selection:bg-purple-500 selection:text-white">
+    <div className="min-h-screen bg-gray-900 text-white font-sans selection:bg-purple-500 selection:text-white overflow-hidden relative">
+      <NumerologyBackground />
+      
       <div className="fixed inset-0 z-0 opacity-10 pointer-events-none overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
         {/* Decorative numbers */}
@@ -61,22 +65,22 @@ export default function Home() {
         <div className="absolute top-1/2 left-1/3 text-6xl font-bold rotate-45 opacity-10">7</div>
       </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto h-screen flex flex-col p-4">
-        <header className="py-6 text-center border-b border-gray-800">
-          <h1 className="text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 flex items-center justify-center gap-3">
+      <div className="relative z-10 max-w-4xl mx-auto h-screen flex flex-col p-4 backdrop-blur-sm">
+        <header className="py-6 text-center border-b border-gray-800/50">
+          <h1 className="text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-purple-400 flex items-center justify-center gap-3 drop-shadow-lg animate-pulse">
             <Sparkles className="w-8 h-8 text-purple-400" />
-            Gary The Numbers Bot
+            THE NUMBERS BOT
             <Sparkles className="w-8 h-8 text-purple-400" />
           </h1>
-          <p className="text-gray-400 mt-2">Ask about numerology, astrology, and the transcripts!</p>
+          <p className="text-gray-300 mt-2 font-medium tracking-wide uppercase text-sm">Powered by Gary's Wisdom & The Number 33</p>
         </header>
 
         <div className="flex-1 overflow-y-auto py-4 px-2 space-y-6 custom-scrollbar">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-4">
               <Bot className="w-16 h-16 opacity-50" />
-              <p className="text-xl text-center max-w-md">
-                &quot;Listen up! The numbers don&apos;t lie. Ask me anything about the videos, the predictions, or your own path!&quot;
+              <p className="text-xl text-center max-w-md font-bold text-purple-300">
+                &quot;Wake up! The numbers rule the world. 3, 6, 9. What do you want to know?&quot;
               </p>
             </div>
           )}

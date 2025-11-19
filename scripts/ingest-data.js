@@ -13,53 +13,105 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+function splitText(text, maxLength = 4000, overlap = 200) {
+  if (text.length <= maxLength) return [text];
+  
+  const chunks = [];
+  let startIndex = 0;
+  
+  while (startIndex < text.length) {
+    let endIndex = startIndex + maxLength;
+    
+    if (endIndex < text.length) {
+      // Find the last period or newline to avoid cutting in the middle of a sentence
+      const lastPeriod = text.lastIndexOf('.', endIndex);
+      const lastNewline = text.lastIndexOf('\n', endIndex);
+      const cutIndex = Math.max(lastPeriod, lastNewline);
+      
+      if (cutIndex > startIndex) {
+        endIndex = cutIndex + 1; // Include the punctuation
+      }
+    }
+    
+    const chunk = text.slice(startIndex, endIndex).trim();
+    if (chunk) chunks.push(chunk);
+    
+    startIndex = endIndex - overlap;
+  }
+  
+  return chunks;
+}
+
 async function generateEmbedding(text) {
-  const response = await openai.embeddings.create({
-    model: 'text-embedding-3-small',
-    input: text,
-  });
-  return response.data[0].embedding;
+  try {
+    const response = await openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: text,
+    });
+    return response.data[0].embedding;
+  } catch (e) {
+    console.error('Error generating embedding:', e.message);
+    return null;
+  }
 }
 
 async function ingest() {
   const dataPath = path.join(__dirname, '../data/transcripts.json');
   
   if (!fs.existsSync(dataPath)) {
-    console.error('Please create a JSON file at gary-bot/data/transcripts.json with your data.');
-    console.error('Format: [{ "content": "text...", "metadata": { "url": "..." } }]');
+    console.error('No data found at data/transcripts.json');
     return;
   }
 
   const rawData = fs.readFileSync(dataPath, 'utf-8');
   const documents = JSON.parse(rawData);
 
-  console.log(`Found ${documents.length} documents. Starting ingestion...`);
+  console.log(`Found ${documents.length} original videos. Starting chunking and ingestion...`);
+
+  let totalChunks = 0;
 
   for (let i = 0; i < documents.length; i++) {
     const doc = documents[i];
     const { content, ...metadata } = doc;
 
-    try {
-      const embedding = await generateEmbedding(content);
+    // Split content into manageable chunks
+    const chunks = splitText(content);
+    
+    for (let j = 0; j < chunks.length; j++) {
+      const chunkContent = chunks[j];
       
-      const { error } = await supabase.from('documents').insert({
-        content,
-        metadata,
-        embedding,
-      });
+      // Add chunk metadata
+      const chunkMetadata = {
+        ...metadata,
+        chunk_index: j,
+        total_chunks: chunks.length
+      };
 
-      if (error) {
-        console.error(`Error inserting document ${i}:`, error.message);
-      } else {
-        console.log(`Inserted document ${i + 1}/${documents.length}`);
+      try {
+        const embedding = await generateEmbedding(chunkContent);
+        if (!embedding) continue;
+        
+        const { error } = await supabase.from('documents').insert({
+          content: chunkContent,
+          metadata: chunkMetadata,
+          embedding,
+        });
+
+        if (error) {
+          console.error(`Error inserting video ${i+1}, chunk ${j+1}:`, error.message);
+        } else {
+          totalChunks++;
+          if (totalChunks % 10 === 0) {
+             console.log(`Processed video ${i + 1}/${documents.length} (Total chunks inserted: ${totalChunks})`);
+          }
+        }
+      } catch (e) {
+        console.error(`Error processing video ${i+1}, chunk ${j+1}:`, e.message);
       }
-    } catch (e) {
-      console.error(`Error processing document ${i}:`, e.message);
     }
   }
   
-  console.log('Ingestion complete!');
+  console.log(`Ingestion complete! Total chunks: ${totalChunks}`);
 }
 
 ingest();
-
